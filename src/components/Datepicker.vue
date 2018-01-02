@@ -1,18 +1,18 @@
 <template lang="html">
-  <div class="datepicker">
+  <div class="datepicker" :class="{'open': show, 'inline': inline}">
     <div class="toolbar">
-      <button type="button" @click="prevMonth()">Prev</button>
+      <button type="button" class="toolbar-btn" @click="prevMonth()">&lsaquo;</button>
       <div class="toolbar-select">
         <span>{{ currentYear }}</span>
-        <select v-model="currentMonth" @change="changeMonth">
+        <select class="month" v-model="currentMonth" @change="changeMonth">
           <option v-for="(month, i) in monthNames" :value="i" :selected="i = currentMonth">{{month}}</option>
         </select>
       </div>
-      <button type="button" @click="nextMonth()">Next</button>
+      <button type="button" class="toolbar-btn" @click="nextMonth()">&rsaquo;</button>
     </div>
     <div class="calendar">
       <div class="weekdays" v-for="day in dayOrder">
-        <abbr :title="dayNames[day]">{{ dayNames[day].substring(0,3) }}</abbr>
+        <abbr :title="dayNames[day]">{{ dayNames[day].substring(0,2) }}</abbr>
       </div>
       <button
         class="date"
@@ -42,6 +42,14 @@ export default {
     },
     setFewDates: {
       type: Array,
+      required: false
+    },
+    show: {
+      type: Boolean,
+      required: false
+    },
+    inline: {
+      type: Boolean,
       required: false
     }
   },
@@ -181,15 +189,61 @@ export default {
 
 <style lang="scss" scoped>
 .datepicker {
+  display: none;
+  position: absolute;
+  min-width: 250px;
+  width: 250px;
+  background-color: #fff;
+  padding: .2rem;
+  z-index: 999;
+  box-shadow: 0 0 10px rgba(0,0,0,.2);
+  &.open {
+    display: block;
+  }
+  &.inline {
+    display: block;
+    position: relative;
+    width: 100%;
+    box-shadow: none;
+    z-index: 1;
+  }
   .toolbar {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ccc;
+    &-btn {
+      cursor: pointer;
+      font-size: 1.4rem;
+      border: 0;
+      background-color: transparent;
+      padding: .5rem;
+      outline: none;
+      &:hover, &:focus {
+        background-color: #f4f4f4;
+      }
+      &:active {
+        background-color: #eee;
+      }
+    }
+    .month {
+      background-image: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      border: none;
+      background-color: transparent;
+      font-size: 1rem;
+      outline: none;
+      box-shadow: none;
+    }
   }
   .calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     .weekdays {
       text-align: center;
+      padding: .5rem 0;
       abbr {
         text-decoration: none;
         text-transform: uppercase;

@@ -1,13 +1,29 @@
 <template>
   <div id="app">
-    <Datepicker
-      :setDisabledDates="disabled"
-      :setFewDates="few"
-      @date="selectedDate"
-      @month="selectedMonth"
-    />
-    <p>Selected Date: {{ date }}</p>
-    <p>Month: {{ month }}</p>
+    <div>
+      <button type="button" @click="openDatepicker">datepicker</button>
+      <Datepicker
+        :show="show"
+        :setDisabledDates="disabled"
+        :setFewDates="few"
+        @date="selectedDate"
+        @month="selectedMonth"
+      />
+      <p>Selected Date: {{ date }}</p>
+      <p>Month: {{ month }}</p>
+    </div>
+    <hr>
+    <div>
+      <Datepicker
+        :inline="true"
+        :setDisabledDates="disabled"
+        :setFewDates="few"
+        @date="selectedDate"
+        @month="selectedMonth"
+      />
+      <p>Selected Date: {{ date }}</p>
+      <p>Month: {{ month }}</p>
+    </div>
   </div>
 </template>
 
@@ -21,6 +37,7 @@ export default {
   },
   data () {
     return {
+      show: false,
       date: null,
       month: null,
       disabled: [
@@ -38,8 +55,12 @@ export default {
     }
   },
   methods: {
+    openDatepicker () {
+      this.show = !this.show
+    },
     selectedDate (value) {
       this.date = value
+      this.show = false
     },
     selectedMonth (value) {
       this.month = value
@@ -48,5 +69,21 @@ export default {
 }
 </script>
 
-<style>
+<style lang="scss">
+* {
+  box-sizing: border-box;
+  &::before, &::after {
+    box-sizing: inherit;
+  }
+}
+html, body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  font: normal 1rem/1.4 Helvetica, Arial, sans-serif;
+}
+#app {
+  padding: 1rem;
+}
 </style>
