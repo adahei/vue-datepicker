@@ -15,6 +15,7 @@
     <hr>
     <div>
       <Datepicker
+        :disablePast="true"
         :inline="true"
         :setDisabledDates="disabled"
         :setFewDates="few"

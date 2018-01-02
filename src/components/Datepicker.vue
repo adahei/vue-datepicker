@@ -44,6 +44,10 @@ export default {
       type: Array,
       required: false
     },
+    disablePast: {
+      type: Boolean,
+      required: false
+    },
     show: {
       type: Boolean,
       required: false
@@ -241,6 +245,8 @@ export default {
   .calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+    grid-column-gap: 2px;
+    grid-row-gap: 2px;
     .weekdays {
       text-align: center;
       padding: .5rem 0;
@@ -258,6 +264,7 @@ export default {
       outline: none;
       cursor: pointer;
       background-color: #fff;
+      border-radius: 4px;
       &:hover, &:focus {
         background-color: #eee;
       }
