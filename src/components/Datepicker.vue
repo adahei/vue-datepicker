@@ -1,5 +1,15 @@
 <template lang="html">
-  <div class="datepicker" :class="{'open': show, 'inline': inline}">
+  <div
+    class="datepicker"
+    :class="{'open': showDatepicker, 'inline': inline}"
+    ref="datepicker"
+    autofocus
+    v-click-outside="outside"
+    @keyup.up="focusUp"
+    @keyup.right="focusRight"
+    @keyup.down="focusDown"
+    @keyup.left="focusLeft"
+  >
     <div class="toolbar">
       <button type="button" class="toolbar-btn" @click="prevMonth()">&lsaquo;</button>
       <div class="toolbar-select">
@@ -10,7 +20,7 @@
       </div>
       <button type="button" class="toolbar-btn" @click="nextMonth()">&rsaquo;</button>
     </div>
-    <div class="calendar">
+    <div class="calendar" ref="calendar">
       <div class="weekdays" v-for="day in dayOrder">
         <abbr :title="dayNames[day]">{{ dayNames[day].substring(0,2) }}</abbr>
       </div>
@@ -18,15 +28,17 @@
         class="date"
         type="button"
         v-for="date in daysInMonth"
-        :disabled="(date.getMonth() !== currentMonth || isDisabled(date))"
+        :ref="date.getTime()"
+        :disabled="(date.getMonth() !== currentMonth || isDisabled(date) || isPassed(date))"
         @click="selectDay(date)"
         :class="{
           'today': isToday(date),
-          'selected': (date === selectedDate),
+          'selected': (date.getTime() === selectedDate),
           'few': isFew(date)
         }"
       >
         {{ date.getDate() }}
+        <span v-if="isFew(date)" class="few">Få</span>
       </button>
     </div>
   </div>
@@ -38,6 +50,10 @@ export default {
   props: {
     setDisabledDates: {
       type: Array,
+      required: false
+    },
+    selected: {
+      type: [String, Date],
       required: false
     },
     setFewDates: {
@@ -74,13 +90,25 @@ export default {
   mounted () {
     this.init()
   },
+  computed: {
+    showDatepicker () {
+      if (!this.inline) {
+        return this.show
+      }
+      return true
+    }
+  },
   methods: {
     init () {
-      const date = new Date()
-      this.today = date
-      this.currentDate = date.getDate()
-      this.currentMonth = date.getMonth()
-      this.currentYear = date.getFullYear()
+      let date = new Date().getTime()
+      this.today = new Date(new Date(date).getFullYear(), new Date(date).getMonth(), new Date(date).getDate())
+      if (this.selected) {
+        date = new Date(this.selected).getTime()
+      }
+      this.selectedDate = new Date(new Date(date).getFullYear(), new Date(date).getMonth(), new Date(date).getDate()).getTime()
+      this.currentDate = new Date(date).getDate()
+      this.currentMonth = new Date(date).getMonth()
+      this.currentYear = new Date(date).getFullYear()
       this.getDaysInMonth(this.currentMonth, this.currentYear)
     },
     getDaysInMonth (month, year) {
@@ -104,7 +132,7 @@ export default {
       let padDate = new Date(dates[0])
       let padBeforeArray = []
       while (padAmount > 0) {
-        padBeforeArray.push(new Date(padDate.setDate(padDate.getDate() - 1)))
+        padBeforeArray.unshift(new Date(padDate.setDate(padDate.getDate() - 1)))
         padAmount--
       }
       return padBeforeArray
@@ -144,17 +172,22 @@ export default {
       this.getDaysInMonth(this.currentMonth, this.currentYear)
     },
     selectDay (date) {
-      this.selectedDate = date
-      this.$emit('date', date)
+      this.selectedDate = date.getTime()
+      this.$refs[date.getTime()][0].focus()
+      this.$emit('date', this.convertDate(date))
+    },
+    isPassed (date) {
+      if (this.disablePast) {
+        const today = this.today
+        if (date.getTime() < today.getTime()) {
+          return true
+        }
+        return false
+      }
     },
     isToday (date) {
       const today = this.today
-      if (
-        date !== '' &&
-        date.getFullYear() === today.getFullYear() &&
-        date.getMonth() === today.getMonth() &&
-        date.getDate() === today.getDate()
-      ) {
+      if (today.getTime() === date.getTime()) {
         return true
       }
       return false
@@ -183,9 +216,90 @@ export default {
         date.setDate(date.getDate() + 1)
       }
       let monthSpan = []
-      monthSpan.push(days[0])
-      monthSpan.push(days[days.length - 1])
+      monthSpan.push(this.convertDate(days[0]))
+      monthSpan.push(this.convertDate(days[days.length - 1]))
       this.$emit('month', monthSpan)
+    },
+    focusUp () {
+      this.selectDate(-7)
+    },
+    focusRight () {
+      this.selectDate(1)
+    },
+    focusDown () {
+      this.selectDate(7)
+    },
+    focusLeft () {
+      this.selectDate(-1)
+    },
+    selectDate (days) {
+      let selected = new Date(this.selectedDate)
+      let negative = days < 0
+      let navigateTo = negative ? new Date(selected.setDate(selected.getDate() - Math.abs(days))) : new Date(selected.setDate(selected.getDate() + Math.abs(days)))
+      if (this.isDisabled(navigateTo)) {
+        let dir = negative ? 'prev' : 'next'
+        navigateTo = this.selectNextPossibleDate(navigateTo, dir)
+      }
+      if (selected.getFullYear() !== this.selectedYear || selected.getMonth() !== this.selectedMonth) {
+        this.currentDate = new Date(selected).getDate()
+        this.currentMonth = new Date(selected).getMonth()
+        this.currentYear = new Date(selected).getFullYear()
+        this.getDaysInMonth(selected.getMonth(), selected.getFullYear())
+      }
+      this.selectDay(navigateTo)
+    },
+    selectNextPossibleDate (date, dir) {
+      let maxAttempts = 10
+      let testDate = new Date(date)
+      while (maxAttempts > 0) {
+        if (this.isDisabled(testDate)) {
+          if (dir === 'next') {
+            testDate = new Date(testDate.setDate(testDate.getDate() + 1))
+          } else {
+            testDate = new Date(testDate.setDate(testDate.getDate() - 1))
+          }
+        }
+        maxAttempts--
+        return testDate
+      }
+      return this.selectedDate
+    },
+    convertDate (date) {
+      return date.toLocaleDateString()
+    },
+    outside: function (e) {
+      if (!this.inline && this.show) {
+        this.$emit('close', true)
+      }
+    }
+  },
+  directives: {
+    'click-outside': {
+      bind: function (el, binding, vNode) {
+        // Provided expression must evaluate to a function.
+        if (typeof binding.value !== 'function') {
+          const compName = vNode.context.name
+          let warn = `[Vue-click-outside:] provided expression '${binding.expression}' is not a function, but has to be`
+          if (compName) { warn += `Found in component '${compName}'` }
+
+          console.warn(warn)
+        }
+        // Define Handler and cache it on the element
+        const bubble = binding.modifiers.bubble
+        const handler = (e) => {
+          if (bubble || (!el.contains(e.target) && el !== e.target)) {
+            binding.value(e)
+          }
+        }
+        el.__vueClickOutside__ = handler
+        // add Event Listeners
+        document.addEventListener('click', handler)
+      },
+      unbind: function (el, binding) {
+        // Remove Event Listeners
+        document.removeEventListener('click', el.__vueClickOutside__)
+        el.__vueClickOutside__ = null
+      }
     }
   }
 }
@@ -258,15 +372,21 @@ export default {
     }
     .date {
       border: 0;
-      padding: .5rem 0;
+      padding: 0;
       margin: 0;
       font-size: 1rem;
       outline: none;
       cursor: pointer;
       background-color: #fff;
       border-radius: 4px;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      min-height: 40px;
       &:hover, &:focus {
-        background-color: #eee;
+        border-color: #085ca7;
       }
       &.today {
         font-weight: bold;
@@ -276,12 +396,16 @@ export default {
       &[disabled] {
         color: #999;
       }
+      &.few {
+        background-color: #ffe6cc;
+        color: #000;
+      }
       &.selected {
         background-color: #085ca7;
         color: #e3f1fe;
       }
-      &.few {
-        background-color: #ffe6cc;
+      .few {
+        font-size: .8rem;
       }
     }
   }
