@@ -27,7 +27,7 @@
         :inline="true"
         :setDisabledDates="disabled"
         :setFewDates="few"
-        selected="2018-02-17"
+        selected="2018-01-17"
         @date="selectedDate2"
         @month="selectedMonth2"
       />
@@ -108,7 +108,7 @@ export default {
       month2: null,
       disabled: [
         new Date(2018, 0, 5),
-        new Date(2018, 0, 8),
+        new Date(2018, 0, 13),
         new Date(2018, 0, 15),
         new Date(2018, 0, 18)
       ],

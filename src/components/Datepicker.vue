@@ -3,7 +3,6 @@
     class="datepicker"
     :class="{'open': showDatepicker, 'inline': inline}"
     ref="datepicker"
-    autofocus
     v-click-outside="outside"
     @keyup.up="focusUp"
     @keyup.right="focusRight"
@@ -118,10 +117,10 @@ export default {
         days.push(new Date(date))
         date.setDate(date.getDate() + 1)
       }
-
+      // Fill out before
       let before = this.padBefore(days)
       days = before.concat(days)
-
+      // Fill out after
       let after = this.padAfter(days)
       days = days.concat(after)
       this.monthSpan()
@@ -173,8 +172,16 @@ export default {
     },
     selectDay (date) {
       this.selectedDate = date.getTime()
-      this.$refs[date.getTime()][0].focus()
-      this.$emit('date', this.convertDate(date))
+      if (this.$refs[date.getTime()] && this.$refs[date.getTime()].length > 0) {
+        this.$refs[date.getTime()][0].focus()
+        this.$emit('date', this.convertDate(date))
+      } else {
+        var self = this
+        setTimeout(function () {
+          self.$refs[date.getTime()][0].focus()
+          self.$emit('date', self.convertDate(date))
+        }, 200)
+      }
     },
     isPassed (date) {
       if (this.disablePast) {
@@ -234,35 +241,42 @@ export default {
     },
     selectDate (days) {
       let selected = new Date(this.selectedDate)
-      let negative = days < 0
-      let navigateTo = negative ? new Date(selected.setDate(selected.getDate() - Math.abs(days))) : new Date(selected.setDate(selected.getDate() + Math.abs(days)))
-      if (this.isDisabled(navigateTo)) {
-        let dir = negative ? 'prev' : 'next'
-        navigateTo = this.selectNextPossibleDate(navigateTo, dir)
-      }
-      if (selected.getFullYear() !== this.selectedYear || selected.getMonth() !== this.selectedMonth) {
-        this.currentDate = new Date(selected).getDate()
-        this.currentMonth = new Date(selected).getMonth()
-        this.currentYear = new Date(selected).getFullYear()
-        this.getDaysInMonth(selected.getMonth(), selected.getFullYear())
+      let dir = days < 0 ? 'prev' : 'next'
+      let navigateTo = this.selectNextPossibleDate(selected, dir, Math.abs(days))
+      if (selected.getFullYear() !== navigateTo.getFullYear() || selected.getMonth() !== navigateTo.getMonth()) {
+        this.currentDate = new Date(navigateTo).getDate()
+        this.currentMonth = new Date(navigateTo).getMonth()
+        this.currentYear = new Date(navigateTo).getFullYear()
+        this.getDaysInMonth(navigateTo.getMonth(), navigateTo.getFullYear())
       }
       this.selectDay(navigateTo)
     },
-    selectNextPossibleDate (date, dir) {
+    selectNextPossibleDate (date, dir, amount) {
+      let current = new Date(date)
       let maxAttempts = 10
-      let testDate = new Date(date)
+      let targetDate = new Date(current)
+      if (dir === 'prev') {
+        targetDate = new Date(targetDate.setDate(targetDate.getDate() - amount))
+      } else if (dir === 'next') {
+        targetDate = new Date(targetDate.setDate(targetDate.getDate() + amount))
+      }
       while (maxAttempts > 0) {
-        if (this.isDisabled(testDate)) {
-          if (dir === 'next') {
-            testDate = new Date(testDate.setDate(testDate.getDate() + 1))
-          } else {
-            testDate = new Date(testDate.setDate(testDate.getDate() - 1))
+        if (this.disablePast && this.isPassed(targetDate)) {
+          console.warn(`Datepicker: Target date (${targetDate}) has passed`)
+          return current
+        }
+        if (this.isDisabled(targetDate)) {
+          if (dir === 'prev') {
+            targetDate = new Date(targetDate.setDate(targetDate.getDate() - 1))
+          } else if (dir === 'next') {
+            targetDate = new Date(targetDate.setDate(targetDate.getDate() + 1))
           }
+        } else {
+          return targetDate
         }
         maxAttempts--
-        return testDate
       }
-      return this.selectedDate
+      return current
     },
     convertDate (date) {
       return date.toLocaleDateString()
